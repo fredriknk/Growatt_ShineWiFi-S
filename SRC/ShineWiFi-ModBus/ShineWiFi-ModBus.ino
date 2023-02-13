@@ -24,7 +24,7 @@ e.g. C:\Users\<username>\AppData\Local\Temp\arduino_build_533155
 
 #include "Config.h"
 #ifndef __CONFIG_H__
-#error Please rename config.h.example to config.h
+#error Please rename Config.h.example to Config.h
 #endif
 
 #include "WebDebug.h"
@@ -55,7 +55,11 @@ e.g. C:\Users\<username>\AppData\Local\Temp\arduino_build_533155
 #include "ShineMqtt.h"
 
 #if MQTT_SUPPORTED == 1
-    WiFiClient espClient;
+    #ifdef MQTTS_ENABLED
+        WiFiClientSecure espClient;
+    #else
+        WiFiClient espClient;
+    #endif
     ShineMqtt shineMqtt(espClient);
 #endif
 
@@ -241,6 +245,7 @@ void saveParamCallback()
     ESP.restart();
 }
 #endif
+
 void setup()
 {
     #if ENABLE_DEBUG_OUTPUT == 1
@@ -311,6 +316,9 @@ void setup()
     }
 
     #if MQTT_SUPPORTED == 1
+        #ifdef MQTTS_ENABLED
+            espClient.setCACert(MQTTS_BROKER_CA_CERT);
+        #endif
         shineMqtt.mqttSetup(mqttConfig);
     #else
         setupMenu(false);
@@ -329,7 +337,7 @@ void setup()
     Inverter.InitProtocol();
     InverterReconnect();
     #if UPDATE_SUPPORTED == 1
-    httpUpdater.setup(&httpServer, update_path, UPDATE_USER, UPDATE_PASSWORD);
+        httpUpdater.setup(&httpServer, update_path, UPDATE_USER, UPDATE_PASSWORD);
     #endif
     httpServer.begin();
 }
@@ -409,15 +417,7 @@ void MainPage(void)
 
 void SendPostSite(void)
 {
-    httpServer.send(200, "text/html",
-        "<form action=\"/postCommunicationModbus_p\" method=\"POST\">"
-        "<input type=\"text\" name=\"reg\" placeholder=\"Register ID\"></br>"
-        "<input type=\"text\" name=\"val\" placeholder=\"Input Value (16bit only!)\"></br>"
-        "<select name=\"type\"><option value=\"16b\" selected>16b</option><option value=\"32b\">32b</option></select></br>"
-        "<select name=\"operation\"><option value=\"R\" selected>Read</option><option value=\"W\">Write</option></select></br>"
-        "<select name=\"registerType\"><option value=\"I\" selected>Input Register</option><option value=\"H\">Holding Register</option></select></br>"
-        "<input type=\"submit\" value=\"Go\">"
-        "</form>");
+    httpServer.send(200, "text/html", SendPostSite_page);
 }
 
 void handlePostData()
